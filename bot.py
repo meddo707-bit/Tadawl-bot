@@ -1,51 +1,62 @@
-import yfinance as yf, os, requests
-from datetime import datetime
+import yfinance as yf
+import requests
+import os
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_IDS = os.getenv("CHAT_ID","").split(",")
+CHAT_ID = os.getenv("CHAT_ID")
 
-STOCKS = ["1120.SR","1211.SR","2222.SR","2010.SR","2280.SR","AAPL","MSFT","NVDA","TSLA","META","BTC-USD","ETH-USD","SOL-USD"]
+def calc_rsi(data, period=14):
+    delta = data['Close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    rs = gain / loss
+    rsi = 100 - (100 / (1 + rs))
+    return rsi.iloc[-1]
 
-def get_signal(t):
+def get_info(symbol):
     try:
-        df = yf.download(t, period="1mo", progress=False, auto_adjust=True)
-        if len(df) < 21:
-            return None
-        
-        c = df['Close']
-        if hasattr(c, 'columns'):
-            c = c.iloc[:,0]
-        
-        p = float(c.iloc[-1])
-        low = float(c.min())
-        
-        d = c.diff()
-        g = d.where(d>0,0).rolling(14).mean()
-        l = (-d.where(d<0,0)).rolling(14).mean()
-        rs = g / l
-        rsi = float((100 - (100/(1+rs))).iloc[-1])
-        change = float((c.iloc[-1]/c.iloc[-2]-1)*100)
-        
-        if rsi < 70 and p <= low * 1.18:
-            market = "🇸🇦 تاسي" if ".SR" in t else "🪙 كريبتو" if "-USD" in t else "🇺🇸 امريكي"
-            name = t.replace(".SR","").replace("-USD","")
-            return f"🟢 {name} - {market}\nالسعر: {p:.2f} | RSI: {rsi:.0f} | {change:+.1f}%\nقريب من القاع"
-    except Exception as e:
-        print(f"Error {t}: {e}")
+        df = yf.download(symbol, period="1mo", interval="1d", progress=False)
+        if df.empty: return None
+        close = float(df['Close'].iloc[-1])
+        prev = float(df['Close'].iloc[-2])
+        change = ((close-prev)/prev)*100
+        rsi = calc_rsi(df)
+        low20 = float(df['Low'].tail(20).min())
+        target = close * 1.05
+        stop = low20 * 0.97
+        return close, change, rsi, low20, target, stop
+    except:
         return None
-    return None
 
-now = datetime.now().strftime("%I:%M %p - %d/%m")
-msgs = [s for s in [get_signal(x) for x in STOCKS] if s]
+# كل اسهمك
+stocks = {
+    "2222.SR": "تاسي - 2222",
+    "2010.SR": "تاسي - 2010", 
+    "2280.SR": "تاسي - 2280",
+    "META": "وول ستريت 🇺🇸 - META",
+    "NVDA": "وول ستريت 🇺🇸 - NVDA",
+    "AAPL": "وول ستريت 🇺🇸 - AAPL",
+    "BTC-USD": "كريبتو ₿ - BTC",
+    "ETH-USD": "كريبتو - ETH",
+    "SOL-USD": "كريبتو - SOL",
+}
 
-if msgs:
-    text = f"🔥 توصيات ابو سلطان - {now} 🔥\n\n" + "\n\n".join(msgs)
-else:
-    text = f"✅ فحص لايف - {now}\nلا يوجد فرص قوية حاليا\nالفحص كل 30 دقيقة تلقائيا"
+msg = f"🔥 توصيات ابو سلطان - 06:47 PM - 25/08 🔥\n---\n\n"
 
-for cid in CHAT_IDS:
-    cid = cid.strip()
-    if cid:
-        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", data={"chat_id":cid,"text":text})
+for sym, name in stocks.items():
+    data = get_info(sym)
+    if not data: continue
+    close, change, rsi, low20, target, stop = data
+    
+    flag = "🟢" if rsi < 50 else "🟡"
+    
+    msg += f"{flag} {name}\n"
+    msg += f"💰 {close:.4f} ({change:+.2f}%)\n"
+    msg += f"📊 RSI: {rsi:.1f} | قاع 20: {low20:.4f}\n"
+    msg += f"🎯 هدف: {target:.4f} (+5%) | وقف: {stop:.4f}\n\n"
 
-print(text)
+msg += "---\n⏰ فحص لايف مباشر ✅"
+
+url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
+print(msg)
