@@ -3,7 +3,6 @@ import requests
 import os
 BOT_TOKEN=os.getenv("BOT_TOKEN")
 CHAT_ID=os.getenv("CHAT_ID")
-
 def calc_rsi(d):
  delta=d['Close'].diff()
  g=delta.where(delta>0,0).rolling(14).mean()
@@ -11,7 +10,6 @@ def calc_rsi(d):
  rs=g/l
  rsi=100-(100/(1+rs))
  return rsi.iloc[-1]
-
 def get_info(s):
  try:
   df=yf.download(s,period="1mo",progress=False)
@@ -27,27 +25,8 @@ def get_info(s):
   return c,ch,r,lo,tg,st
  except:
   return None
-
-stocks=[
-"2222.SR",
-"2010.SR",
-"META",
-"NVDA",
-"BTC-USD",
-"ETH-USD",
-"SOL-USD"
-]
-
-names=[
-"2222 tasi",
-"2010 tasi",
-"META usa",
-"NVDA usa",
-"BTC crypto",
-"ETH crypto",
-"SOL crypto"
-]
-
+stocks=["2222.SR","2010.SR","META","NVDA","BTC-USD","ETH-USD","SOL-USD"]
+names=["2222 tasi","2010 tasi","META usa","NVDA usa","BTC crypto","ETH crypto","SOL crypto"]
 m="Tadawl Bot\n\n"
 for i in range(len(stocks)):
  d=get_info(stocks[i])
@@ -56,10 +35,4 @@ for i in range(len(stocks)):
  c,ch,r,lo,tg,st=d
  m+=names[i]+"\n"
  m+=f"{c:.2f} ({ch:.2f}%)\n"
- m+=f"RSI {r:.1f} low {lo:.2f}\n"
- m+=f"TGT {tg:.2f} STP {st:.2f}\n\n"
-
-m+="Live check"
-url=f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-requests.post(url,data={"chat_id":CHAT_ID,"text":m})
-print(m)
+ m+=f"RSI {r:.1f} low {lo
