@@ -1,26 +1,17 @@
-name: Tadawl-bot
+import os, requests, time, sys
+BOT_TOKEN=os.getenv("BOT_TOKEN")
+CHAT_ID=os.getenv("CHAT_ID")
+print(f"TOKEN exists: {bool(BOT_TOKEN)} len={len(BOT_TOKEN) if BOT_TOKEN else 0}", flush=True)
+print(f"CHAT_ID exists: {bool(CHAT_ID)} value={CHAT_ID}", flush=True)
 
-on:
-  schedule:
-    - cron: '0 4 * * 1-5'
-  workflow_dispatch:
+def send(m):
+    try:
+        url=f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        r=requests.get(url, params={"chat_id": CHAT_ID, "text": m}, timeout=20)
+        print(f"Telegram response: {r.status_code} {r.text}", flush=True)
+    except Exception as e:
+        print(f"Send error: {e}", flush=True)
 
-jobs:
-  run:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install python-telegram-bot requests
-      - name: Run bot
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: |
-          python main.py || python bot.py || python app.py
+send("تم ✅ البوت الجديد شغال")
+print("Sleeping 1 hour...", flush=True)
+time.sleep(3600)
