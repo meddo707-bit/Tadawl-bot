@@ -1,46 +1,43 @@
 import yfinance as yf
-import time
-import requests
-import os
-from datetime import datetime
+import time, requests, os
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_BOT_TOKEN_HERE")
-CHAT_ID = os.getenv("CHAT_ID", "PUT_YOUR_CHAT_ID_HERE")
+BOT_TOKEN=os.getenv("BOT_TOKEN")
+CHAT_ID=os.getenv("CHAT_ID")
+STOCKS=["1120.SR","2222.SR","7010.SR","1180.SR","2010.SR","2380.SR","2200.SR","6015.SR","2082.SR","1150.SR"]
 
-STOCKS = ["1120.SR", "2222.SR", "7010.SR", "1180.SR", "2010.SR", "2380.SR", "2200.SR", "6015.SR", "2082.SR", "7203.SR", "1211.SR", "2280.SR", "1150.SR", "1080.SR", "1060.SR", "1010.SR", "2030.SR", "2223.SR", "4165.SR", "7202.SR"]
-
-def send_telegram(msg):
+def send(m):
     try:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        requests.post(url, json={"chat_id": CHAT_ID, "text": msg})
+        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",json={"chat_id":CHAT_ID,"text":m})
     except:
         pass
 
-def check_stock(symbol):
+def check(s):
     try:
-        stock = yf.Ticker(symbol)
-        hist = stock.history(period="3mo")
-        if len(hist) < 20:
+        h=yf.Ticker(s).history(period="6mo")
+        if len(h)<30:
             return None
-        last = float(hist['Close'].iloc[-1])
-        low_20 = float(hist['Low'].tail(20).min())
-        high_20 = float(hist['High'].tail(20).max())
-        target = last * 1.04
-        stop = low_20 * 0.98
-        if last <= low_20 * 1.02:
-            return f"🟢 توصية شراء - {symbol}\n\nالسعر الحالي: {last:.2f}\nقاع 20 يوم: {low_20:.2f}\nالهدف: {target:.2f} (+4%)\nوقف الخسارة: {stop:.2f}\n\nالوقت: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-        if last >= high_20 * 0.98:
-            return f"🔴 تنبيه بيع - {symbol}\n\nالسعر الحالي: {last:.2f}\nقمة 20 يوم: {high_20:.2f}\nالاجراء: جني ربح 50%\n\nالوقت: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        last=float(h['Close'].iloc[-1])
+        low=float(h['Low'].tail(20).min())
+        high=float(h['High'].tail(20).max())
+        d=h['Close'].diff()
+        g=d.where(d>0,0).rolling(14).mean()
+        l=-d.where(d<0,0).rolling(14).mean()
+        rsi=100-(100/(1+g/l))
+        r=float(rsi.iloc[-1])
+        av=h['Volume'].tail(20).mean()
+        lv=h['Volume'].iloc[-1]
+        if last<=low*1.02 and r<40 and lv>av*0.8:
+            return f"🟢 شراء قوي - {s}\nالسعر:{last:.2f}\nRSI:{r:.1f}\nهدف:{last*1.04:.2f} وقف:{last*0.97:.2f}"
+        if last>=high*0.98 and r>65:
+            return f"🔴 بيع - {s}\nالسعر:{last:.2f} RSI:{r:.1f}"
     except:
         pass
-    return None
 
-send_telegram(f"✅ البوت اشتغل - يراقب {len(STOCKS)} سهم\n" + ", ".join(STOCKS))
-
+send("✅ البوت V2 اشتغل - فلتر RSI")
 while True:
     for s in STOCKS:
-        msg = check_stock(s)
-        if msg:
-            send_telegram(msg)
-        time.sleep(5)
+        m=check(s)
+        if m:
+            send(m)
+        time.sleep(4)
     time.sleep(300)
