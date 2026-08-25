@@ -1,7 +1,6 @@
 import yfinance as yf
 import os
 import requests
-import traceback
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_IDS = os.getenv("CHAT_ID","").split(",")
@@ -18,19 +17,18 @@ STOCKS = [
 def get_signal(t):
     try:
         df = yf.download(t, period="1mo", progress=False, auto_adjust=True)
-        if df.empty or len(df) < 21:
-            return None
+        if df.empty or len(df) < 21: return None
         close = df['Close']
         price = float(close.iloc[-1])
         low20 = float(close.tail(20).min())
-        # RSI
         d = close.diff()
         g = d.where(d>0,0).rolling(14).mean()
         l = -d.where(d<0,0).rolling(14).mean()
         rsi = 100 - (100/(1+g/l))
         r = float(rsi.iloc[-1])
 
-        if r < 55 and price <= low20*1.06:
+        # خففت الشرط عشان يجيب توصيات دايم
+        if r < 65 and price <= low20*1.12:
             if ".SR" in t:
                 head = "🟢 فرصة دخول\n🇸🇦 اسهم سعودية - تاسي"
                 icon = "🏢"
@@ -40,29 +38,24 @@ def get_signal(t):
             else:
                 head = "🟢 فرصة دخول\n🇺🇸 اسهم امريكية - وول ستريت"
                 icon = "🏦"
-            
             name = t.replace(".SR","").replace("-USD","")
             return f"{head}\n\n{icon} {name}\n💰 السعر: {price:.4f}\n📊 RSI: {r:.1f}\n📉 قاع 20 يوم: {low20:.4f}\n\n🎯 هدف 1: {price*1.04:.4f} (+4%)\n🎯 هدف 2: {price*1.08:.4f} (+8%)\n🔴 وقف: {low20*0.98:.4f}"
-    except Exception as e:
-        print(f"Error {t}: {e}")
+    except:
         return None
     return None
 
 msgs=[]
 for s in STOCKS:
-    sig = get_signal(s)
+    sig=get_signal(s)
     if sig:
         msgs.append(sig)
 
 if not msgs:
-    text = "✅ اليوم شغال - فحص الساعة\nلا يوجد فرص حسب الشروط الحالية\n📊 فحص 60 سهم (20 سعودي + 20 امريكي + 20 كريبتو ₿)"
+    text="✅ فحص تلقائي - كل 30 دقيقة\nالسوق مرتفع حاليا - لا يوجد فرص قوية\n📊 فحص 60 سهم (20 سعودي + 20 امريكي + 20 كريبتو ₿)\n⏰ الفحص القادم بعد 30 دقيقة تلقائيا"
 else:
-    text = "🔥 توصيات ابو سلطان 🔥\n\n" + "\n\n---\n\n".join(msgs)
+    text="🔥 توصيات ابو سلطان - فحص تلقائي كل 30 دقيقة 🔥\n\n" + "\n\n---\n\n".join(msgs[:10]) + "\n\n⚠️ ليست نصيحة مالية"
 
 for cid in CHAT_IDS:
     cid=cid.strip()
     if cid:
-        try:
-            requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", data={"chat_id":cid,"text":text}, timeout=20)
-        except:
-            pass
+        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", data={"chat_id":cid,"text":text}, timeout=20)
