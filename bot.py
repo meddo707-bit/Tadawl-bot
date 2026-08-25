@@ -21,8 +21,24 @@ def info(s):
   return c,ch,r,lo,c*1.05,lo*0.97
  except:
   return None
-syms=["2222.SR","2010.SR","META","NVDA","BTC-USD","ETH-USD","SOL-USD"]
-nms=["2222","2010","META","NVDA","BTC","ETH","SOL"]
+syms=[
+ "2222.SR",
+ "2010.SR",
+ "META",
+ "NVDA",
+ "BTC-USD",
+ "ETH-USD",
+ "SOL-USD"
+]
+nms=[
+ "2222",
+ "2010",
+ "META",
+ "NVDA",
+ "BTC",
+ "ETH",
+ "SOL"
+]
 m="Bot\n\n"
 for i in range(7):
  d=info(syms[i])
