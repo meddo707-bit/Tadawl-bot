@@ -14,38 +14,35 @@ STOCKS = [
 "BCH-USD","SHIB-USD","TRX-USD","MATIC-USD","ETC-USD","XLM-USD","ATOM-USD","HBAR-USD","PEPE-USD","BONK-USD"
 ]
 
-def check_stock(ticker):
+def check(ticker):
     try:
-        data = yf.download(ticker, period="1mo", progress=False)
-        if len(data) < 20:
-            return None
-        close = data['Close']
+        df = yf.download(ticker, period="1d", interval="1d", progress=False, auto_adjust=True)
+        hist = yf.download(ticker, period="1mo", progress=False, auto_adjust=True)
+        if len(hist) < 20: return None
+        close = hist['Close']
         price = float(close.iloc[-1])
         low20 = float(close.tail(20).min())
-        # RSI بسيط
         delta = close.diff()
         up = delta.clip(lower=0).rolling(14).mean()
         down = -delta.clip(upper=0).rolling(14).mean()
-        rsi = 100 - (100 / (1 + up/down))
+        rsi = 100 - (100/(1+up/down))
         rsi_val = float(rsi.iloc[-1])
-        if rsi_val < 52 and price <= low20 * 1.05:
-            return f"✅ {ticker} | {price:.2f} | RSI {rsi_val:.1f}"
-    except:
-        return None
-    return None
-
-found = []
-for t in STOCKS:
-    r = check_stock(t)
-    if r:
-        found.append(r)
-
-if not found:
-    text = "📊 فحص 60 سهم (20 سعودي + 20 امريكي + 20 كريبتو)\nلا يوجد فرص RSI<52 حاليا - السوق مرتفع"
-else:
-    text = "🔥 توصيات ابو سلطان - 60 سهم 🔥\n\n" + "\n".join(found) + "\n\n⚠️ ليست نصيحة مالية"
-
-for cid in CHAT_IDS:
-    cid = cid.strip()
-    if cid:
-        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", data={"chat_id":cid,"text":text})
+        
+        # شرط الدخول
+        if rsi_val < 55 and price <= low20 * 1.06:
+            # تحديد النوع
+            if ".SR" in ticker:
+                flag = "🇸🇦 اسهم سعودية - تاسي"
+                icon = "🏢"
+            elif "-USD" in ticker:
+                flag = "₿ كريبتو - عملات رقمية"
+                icon = "🪙"
+            else:
+                flag = "🇺🇸 اسهم امريكية - وول ستريت"
+                icon = "🏦"
+            
+            t1 = price * 1.04
+            t2 = price * 1.08
+            stop = low20 * 0.98
+            
+            msg = f"🟢 فرصة دخول\n{flag}\n\n{icon} {ticker.replace('.SR','').replace('-USD','')
