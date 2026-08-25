@@ -1,6 +1,8 @@
 name: Tadawl-bot
-on: 
+on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 7-12 * * 1-5'
 
 jobs:
   run_bot:
