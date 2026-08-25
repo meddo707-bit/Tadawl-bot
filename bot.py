@@ -50,4 +50,5 @@ for i in range(7):
  m+=f"{r:.1f} {tg:.1f} {st:.1f}\n\n"
 m+="Live"
 u=f"https://api.telegram.org/bot{BOT}/sendMessage"
-requests.post(u,data={"chat_id":CHAT,"text":m})
+d={"chat_id":CHAT,"text":m}
+requests.post(u,data=d)
