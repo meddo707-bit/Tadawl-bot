@@ -18,9 +18,7 @@ def info(s):
   ch=(c-p)/p*100
   r=float(rsi(df))
   lo=float(df['Low'].tail(20).min())
-  tg=c*1.05
-  st=lo*0.97
-  return c,ch,r,lo,tg,st
+  return c,ch,r,lo,c*1.05,lo*0.97
  except:
   return None
 syms=["2222.SR","2010.SR","META","NVDA","BTC-USD","ETH-USD","SOL-USD"]
@@ -32,10 +30,8 @@ for i in range(7):
   continue
  c,ch,r,lo,tg,st=d
  m+=nms[i]+"\n"
- m+=f"{c:.2f} {ch:.2f}%\n"
- m+=f"RSI {r:.1f}\n"
- m+=f"T {tg:.2f} S {st:.2f}\n\n"
+ m+=f"{c:.2f} {ch:.1f}%\n"
+ m+=f"{r:.1f} {tg:.1f} {st:.1f}\n\n"
 m+="Live"
-url=f"https://api.telegram.org/bot{BOT}/sendMessage"
-requests.post(url,data={"chat_id":CHAT,"text":m})
-print(m)
+u=f"https://api.telegram.org/bot{BOT}/sendMessage"
+requests.post(u,data={"chat_id":CHAT,"text":m})
