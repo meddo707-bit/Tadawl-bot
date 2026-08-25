@@ -1,8 +1,6 @@
 name: Tadawl-bot
-on:
+on: 
   workflow_dispatch:
-  schedule:
-    - cron: '0 6 * * 1-5' # 9 صباحا السعودية
 
 jobs:
   run_bot:
