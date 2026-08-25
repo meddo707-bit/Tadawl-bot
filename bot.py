@@ -4,8 +4,7 @@ import pandas as pd
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-# أسهمك
-STOCKS = ["2280.SR", "4080.SR"]  # 2280=المراعي؟ عدلها انت، 4080=SIRI
+STOCKS = ["2280.SR", "4080.SR"]
 NAMES = {"2280.SR": "المراعي", "4080.SR": "SIRI"}
 
 def get_rsi(close, period=14):
@@ -16,15 +15,31 @@ def get_rsi(close, period=14):
     return 100 - (100 / (1 + rs))
 
 def analyze(symbol):
-    df = yf.download(symbol, period="3mo", interval="1d", progress=False)
-    if len(df) < 30: return None
+    df = yf.download(symbol, period="3mo", interval="1d", progress=False, auto_adjust=True)
+    if len(df) < 30:
+        return None
+
+    # اصلاح مشكلة السيريز
     close = df['Close']
-    rsi = get_rsi(close).iloc[-1]
-    low_20 = df['Low'].tail(20).min()
-    price = close.iloc[-1]
-    change = ((price - close.iloc[-2]) / close.iloc[-2]) * 100
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
+    close = close.dropna()
+
+    low = df['Low']
+    if isinstance(low, pd.DataFrame):
+        low = low.iloc[:, 0]
+
+    rsi_series = get_rsi(close)
     
-    # شروط الدخول
+    # نحول كل شي لرقم واحد فقط
+    rsi = float(rsi_series.iloc[-1])
+    price = float(close.iloc[-1])
+    prev = float(close.iloc[-2])
+    low_20 = float(low.tail(20).min())
+    
+    change = ((price - prev) / prev) * 100
+    
+    # شرط الدخول - الحين كلها ارقام مو Series
     if rsi < 45 and price <= low_20 * 1.05:
         target1 = price * 1.03
         target2 = price * 1.06
@@ -34,15 +49,17 @@ def analyze(symbol):
 
 messages = []
 for s in STOCKS:
-    res = analyze(s)
-    if res: messages.append(res)
+    try:
+        res = analyze(s)
+        if res:
+            messages.append(res)
+    except Exception as e:
+        print(f"خطأ في {s}: {e}")
 
 if not messages:
-    messages = ["✅ فحص اليوم: لا يوجد دخول حسب الشروط (RSI + قاع 20 يوم)"]
+    messages = [f"✅ البوت شغال - فحص الساعة {pd.Timestamp.now(tz='Asia/Riyadh').strftime('%I:%M %p')} - لا يوجد دخول"]
 
 text = "\n\n---\n\n".join(messages)
-
-# ارسال لتليجرام
 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-requests.post(url, data={"chat_id": CHAT_ID, "text": text})
-print("تم الارسال")
+r = requests.post(url, data={"chat_id": CHAT_ID, "text": text})
+print(r.text)
