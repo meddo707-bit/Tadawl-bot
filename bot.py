@@ -28,34 +28,30 @@ def get_info(symbol):
     except:
         return None
 
-# كل اسهمك
 stocks = {
     "2222.SR": "تاسي - 2222",
-    "2010.SR": "تاسي - 2010", 
+    "2010.SR": "تاسي - 2010",
     "2280.SR": "تاسي - 2280",
-    "META": "وول ستريت 🇺🇸 - META",
-    "NVDA": "وول ستريت 🇺🇸 - NVDA",
-    "AAPL": "وول ستريت 🇺🇸 - AAPL",
-    "BTC-USD": "كريبتو ₿ - BTC",
+    "META": "وول ستريت - META",
+    "NVDA": "وول ستريت - NVDA",
+    "AAPL": "وول ستريت - AAPL",
+    "BTC-USD": "كريبتو - BTC",
     "ETH-USD": "كريبتو - ETH",
     "SOL-USD": "كريبتو - SOL",
 }
 
-msg = f"🔥 توصيات ابو سلطان - 06:47 PM - 25/08 🔥\n---\n\n"
+msg = f"توصيات ابو سلطان\n\n"
 
 for sym, name in stocks.items():
     data = get_info(sym)
     if not data: continue
     close, change, rsi, low20, target, stop = data
-    
-    flag = "🟢" if rsi < 50 else "🟡"
-    
-    msg += f"{flag} {name}\n"
-    msg += f"💰 {close:.4f} ({change:+.2f}%)\n"
-    msg += f"📊 RSI: {rsi:.1f} | قاع 20: {low20:.4f}\n"
-    msg += f"🎯 هدف: {target:.4f} (+5%) | وقف: {stop:.4f}\n\n"
+    msg += f"{name}\n"
+    msg += f"${close:.4f} ({change:+.2f}%)\n"
+    msg += f"RSI: {rsi:.1f} | قاع 20: {low20:.4f}\n"
+    msg += f"هدف: {target:.4f} (+5%) | وقف: {stop:.4f}\n\n"
 
-msg += "---\n⏰ فحص لايف مباشر ✅"
+msg += "---\nفحص لايف مباشر"
 
 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
