@@ -22,24 +22,18 @@ def check_stock(symbol):
         hist = stock.history(period="3mo")
         if len(hist) < 20:
             return None
-        
         last = hist['Close'].iloc[-1]
         low_20 = hist['Low'].tail(20).min()
         high_20 = hist['High'].tail(20).max()
-        
-        # BUY signal
         if last <= low_20 * 1.02:
-            return f"BUY {symbol}\nPrice: {last:.2f}\nLow 20d: {low_20:.2f}\nTarget: {last*1.04:.2f} (+4%)\nStop: {low_20*0.98:.2f}\nTime: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-        
-        # SELL signal
+            return f"BUY {symbol} Price {last:.2f} Low {low_20:.2f} Target {last*1.04:.2f} Stop {low_20*0.98:.2f}"
         if last >= high_20 * 0.98:
-            return f"SELL {symbol}\nPrice: {last:.2f}\nHigh 20d: {high_20:.2f}\nAction: Take Profit 50%\nTime: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-            
-    except Exception as e:
-        print(f"Error {symbol}: {e}")
+            return f"SELL {symbol} Price {last:.2f} High {high_20:.2f} Take Profit"
+    except:
+        pass
     return None
 
-send_telegram(f"BOT STARTED - Watching {len(STOCKS)} stocks\n" + ", ".join(STOCKS))
+send_telegram(f"BOT STARTED Watching {len(STOCKS)} stocks")
 
 while True:
     for s in STOCKS:
