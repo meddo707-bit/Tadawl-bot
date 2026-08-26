@@ -1,42 +1,53 @@
 import yfinance as yf, requests, os
-from datetime import timezone, timedelta, datetime
+from datetime import datetime, timezone, timedelta
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 GROUP_ID = os.getenv("GROUP_ID")
 
-def send(msg):
-    for cid in [CHAT_ID, GROUP_ID]:
-        if not cid: continue
-        try:
-            requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={"chat_id": cid, "text": msg}, timeout=10)
-        except: pass
+def send(text):
+    # يرسل مرة وحدة بس عشان ما يكرر
+    chat = GROUP_ID or CHAT_ID
+    try:
+        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={"chat_id": chat, "text": text}, timeout=15)
+    except: pass
 
 try:
-    df = yf.download("6013.SR", period="5d", interval="15m", progress=False)
-    close = df['Close'].dropna()
-    if len(close) < 20: raise Exception("no data")
+    data = yf.download("6013.SR", period="5d", interval="15m", progress=False)
+    close = data['Close'].dropna()
+    price = float(close.iloc[-1])
+    
     delta = close.diff()
     gain = delta.where(delta>0,0).rolling(14).mean()
     loss = -delta.where(delta<0,0).rolling(14).mean()
-    rsi = 100 - (100/(1+gain/loss))
-    price = float(close.iloc[-1])
+    rs = gain/loss
+    rsi = 100 - (100/(1+rs))
     r = float(rsi.iloc[-1])
-except:
-    # اذا السوق مقفل يرسل اخر سعر عنده وما يفشل
-    price = 0
-    r = 50
 
-sa_time = datetime.now(timezone.utc) + timedelta(hours=3)
-t = sa_time.strftime("%I:%M %p")
+    if r < 32: status, per = "شراء قوي 🟢", 80
+    elif r < 45: status, per = "شراء 🟢", 60
+    elif r > 72: status, per = "بيع قوي 🔴", 80
+    elif r > 60: status, per = "بيع 🔴", 60
+    else: status, per = "انتظار 🟡", 50
 
-if r < 30:
-    msg = f"🔥 توصيات ابو سلطان - {t}\n\nشراء قوي 🟢 80%\nدخول {price:.2f} RSI {r:.0f}"
-elif r < 40:
-    msg = f"🔥 توصيات ابو سلطان - {t}\n\nشراء 🟢 60%\nدخول {price:.2f} RSI {r:.0f}"
-elif r > 70:
-    msg = f"🔥 توصيات ابو سلطان - {t}\n\nبيع قوي 🔴 80%\nخروج {price:.2f} RSI {r:.0f}"
-else:
-    msg = f"🔥 توصيات ابو سلطان - {t}\n\nانتظار 🟡 50%\nالسعر {price:.2f} RSI {r:.0f}"
+except Exception as e:
+    price, r, status, per = 0, 50, "السوق مغلق 🌙", 0
+
+now = datetime.now(timezone.utc) + timedelta(hours=3)
+time_str = now.strftime("%I:%M %p")
+
+msg = f"""🔥 توصيات ابو سلطان - {time_str} ⏰ كل 15 د
+
+📊 سهم البلاد (6013.SR)
+💰 السعر الحالي: {price:.2f}
+📈 RSI: {r:.0f}
+
+التوصية: {status} {per}%
+
+🎯 دخول: {price:.2f}
+🎯 هدف 1: {price*1.02:.2f} (+2%)
+🛑 وقف: {price*0.98:.2f} (-2%)
+
+⚠️ ليست نصيحة مالية"""
 
 send(msg)
